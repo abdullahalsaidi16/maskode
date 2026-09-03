@@ -1,0 +1,11 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "privacy": {
+    "enabled": true,
+    "backend": "huggingface",
+    "scope": "attachments",
+    "api_key": "{env:HF_TOKEN}",
+    "model": "openai/privacy-filter",
+    "log": "/tmp/bogu-privacy.jsonl"
+  }
+}

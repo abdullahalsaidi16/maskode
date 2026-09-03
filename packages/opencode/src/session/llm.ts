@@ -29,6 +29,7 @@ import * as OtelTracer from "@effect/opentelemetry/Tracer"
 import { LLMAISDK } from "./llm/ai-sdk"
 import { LLMNativeRuntime } from "./llm/native-runtime"
 import { LLMRequestPrep } from "./llm/request"
+import { SessionPrivacy } from "./privacy"
 
 export const OUTPUT_TOKEN_MAX = ProviderTransform.OUTPUT_TOKEN_MAX
 
@@ -81,6 +82,7 @@ const live: Layer.Layer<
     const events = yield* EventV2Bridge.Service
     const llmClient = yield* LLMClient.Service
     const flags = yield* RuntimeFlags.Service
+    const privacyFilters = new Map<string, SessionPrivacy.PrivacyFilter>()
 
     const run = Effect.fn("LLM.run")(function* (input: StreamRequest) {
       yield* Effect.logInfo("stream", {
@@ -111,6 +113,50 @@ const live: Layer.Layer<
         flags,
         isWorkflow,
       })
+      const privacyConfig = cfg.privacy
+      const privacy = (() => {
+        const privacyOverride = process.env.BOGU_PRIVACY_ENABLED
+        if (
+          process.env.BOGU_PRIVACY_FILTER === "off" ||
+          privacyOverride === "0" ||
+          (privacyOverride !== "1" && privacyConfig?.enabled === false)
+        )
+          return
+        const existing = privacyFilters.get(input.sessionID)
+        if (existing) return existing
+        const logPath = process.env.BOGU_PRIVACY_LOG ?? privacyConfig?.log
+        const backend = privacyConfig?.backend ?? "local"
+        const options: SessionPrivacy.Options =
+          backend === "huggingface"
+            ? {
+                backend,
+                apiKey: privacyConfig?.api_key ?? process.env.HF_TOKEN ?? "",
+                model: privacyConfig?.model ?? "openai/privacy-filter",
+                endpoint: privacyConfig?.endpoint ?? "https://router.huggingface.co/hf-inference/models",
+                logPath,
+              }
+            : {
+                backend,
+                executable:
+                  process.env.BOGU_PRIVACY_FILTER ?? privacyConfig?.executable ?? "opf-local",
+                logPath,
+              }
+        if (options.backend === "huggingface" && !options.apiKey)
+          throw new Error("Bogu Hugging Face privacy backend requires HF_TOKEN or privacy.api_key")
+        const created = new SessionPrivacy.PrivacyFilter(options)
+        privacyFilters.set(input.sessionID, created)
+        return created
+      })()
+      const secured = privacy
+        ? {
+            ...prepared,
+            messages: yield* Effect.tryPromise({
+              try: () => privacy.redactMessages(prepared.messages),
+              catch: (error) => new Error(`Bogu privacy filter failed: ${error instanceof Error ? error.message : String(error)}`),
+            }),
+            tools: privacy.wrapTools(prepared.tools),
+          }
+        : prepared
 
       // Wire up toolExecutor for DWS workflow models so that tool calls
       // from the workflow service are executed via opencode's tool system
@@ -223,14 +269,14 @@ const live: Layer.Layer<
 
       // Runtime seam: native is an opt-in adapter over @opencode-ai/llm. It
       // either returns a ready LLMEvent stream or a concrete fallback reason.
-      if (flags.experimentalNativeLlm) {
+      if (flags.experimentalNativeLlm && !privacy) {
         const native = LLMNativeRuntime.stream({
           model: input.model,
           provider: item,
           auth: info,
           llmClient,
-          messages: prepared.messages,
-          tools: prepared.tools,
+          messages: secured.messages,
+          tools: secured.tools,
           toolChoice: input.toolChoice,
           temperature: prepared.params.temperature,
           topP: prepared.params.topP,
@@ -277,6 +323,7 @@ const live: Layer.Layer<
       // LLMAISDK.toLLMEvents below normalizes fullStream parts for the processor.
       return {
         type: "ai-sdk" as const,
+        privacy,
         result: streamText({
           onError(error) {
             bridge.fork(
@@ -314,14 +361,14 @@ const live: Layer.Layer<
           topP: prepared.params.topP,
           topK: prepared.params.topK,
           providerOptions: ProviderTransform.providerOptions(input.model, prepared.params.options),
-          activeTools: Object.keys(prepared.tools).filter((x) => x !== "invalid"),
-          tools: prepared.tools,
+          activeTools: Object.keys(secured.tools).filter((x) => x !== "invalid"),
+          tools: secured.tools,
           toolChoice: input.toolChoice,
           maxOutputTokens: prepared.params.maxOutputTokens,
           abortSignal: input.abort,
           headers: prepared.headers,
           maxRetries: input.retries ?? 0,
-          messages: prepared.messages,
+          messages: secured.messages,
           model: wrapLanguageModel({
             model: language,
             middleware: [
@@ -374,6 +421,7 @@ const live: Layer.Layer<
               e instanceof Error ? e : new Error(String(e)),
             ).pipe(
               Stream.mapEffect((event) => LLMAISDK.toLLMEvents(state, event)),
+              Stream.map((items) => (result.privacy ? result.privacy.restoreEvents(items) : items)),
               Stream.flatMap((events) => Stream.fromIterable(events)),
             )
           }),

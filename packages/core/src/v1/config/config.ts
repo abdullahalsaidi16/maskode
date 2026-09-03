@@ -130,6 +130,20 @@ export const Info = Schema.Struct({
   attachment: Schema.optional(ConfigAttachmentV1.Info).annotate({
     description: "Attachment processing configuration, including image size limits and resizing behavior",
   }),
+  privacy: Schema.optional(
+    Schema.Struct({
+      enabled: Schema.optional(Schema.Boolean),
+      backend: Schema.optional(Schema.Literals(["local", "huggingface"])),
+      scope: Schema.optional(Schema.Literal("attachments")),
+      executable: Schema.optional(Schema.String),
+      api_key: Schema.optional(Schema.String),
+      model: Schema.optional(Schema.String),
+      endpoint: Schema.optional(Schema.String),
+      log: Schema.optional(Schema.String),
+    }),
+  ).annotate({
+    description: "Bogu privacy filtering for text file attachments",
+  }),
   enterprise: Schema.optional(
     Schema.Struct({ url: Schema.optional(Schema.String).annotate({ description: "Enterprise URL" }) }),
   ),

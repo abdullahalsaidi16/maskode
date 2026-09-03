@@ -1,3 +1,26 @@
+# Bogu
+
+Bogu is an unofficial privacy-focused fork of OpenCode. It anonymizes sensitive information in attached text files before the files reach the configured coding-model provider, then restores placeholders locally in responses and tool calls.
+
+> Bogu is an independent project and is not affiliated with or endorsed by the OpenCode team or OpenAI.
+
+See [Bogu privacy setup](docs/BOGU_PRIVACY.md) for local inference, Hugging Face inference, configuration, auditing, and security limitations.
+
+## Development build
+
+```bash
+git clone https://github.com/YOUR_GITHUB_USERNAME/bogu.git
+cd bogu
+bun install
+cd packages/opencode
+bun run script/build.ts --single --skip-install --skip-embed-web-ui
+./dist/opencode-$(uname -s | tr '[:upper:]' '[:lower:]')-arm64/bin/bogu --version
+```
+
+The upstream OpenCode README follows for attribution and general usage documentation.
+
+---
+
 <p align="center">
   <a href="https://opencode.ai">
     <picture>

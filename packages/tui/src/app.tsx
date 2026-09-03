@@ -454,24 +454,24 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
     if (!terminalTitleEnabled() || Flag.OPENCODE_DISABLE_TERMINAL_TITLE) return
 
     if (route.data.type === "home") {
-      renderer.setTerminalTitle("OpenCode")
+      renderer.setTerminalTitle("Bogu")
       return
     }
 
     if (route.data.type === "session") {
       const session = sync.session.get(route.data.sessionID)
       if (!session || isDefaultTitle(session.title)) {
-        renderer.setTerminalTitle("OpenCode")
+        renderer.setTerminalTitle("Bogu")
         return
       }
 
       const title = session.title.length > 40 ? session.title.slice(0, 37) + "…" : session.title
-      renderer.setTerminalTitle(`OC | ${title}`)
+      renderer.setTerminalTitle(`Bogu | ${title}`)
       return
     }
 
     if (route.data.type === "plugin") {
-      renderer.setTerminalTitle(`OC | ${route.data.id}`)
+      renderer.setTerminalTitle(`Bogu | ${route.data.id}`)
     }
   })
 
@@ -690,6 +690,40 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
         slashName: "mcps",
         run: () => {
           dialog.replace(() => <DialogMcp />)
+        },
+      },
+      {
+        name: "privacy.toggle",
+        title: "Toggle attachment privacy",
+        category: "System",
+        slashName: "privacy",
+        run: async () => {
+          const config = sync.data.config as { privacy?: { enabled?: boolean } }
+          const enabled = config.privacy?.enabled !== false
+          const next = !enabled
+          const workspace = project.workspace.current()
+          await sdk.client.config
+            .update(
+              {
+                workspace,
+                // Send only this patch. The synchronized config may contain
+                // resolved {env:...} secrets and must not be written back.
+                config: { privacy: { enabled: next } } as never,
+              },
+              { throwOnError: true },
+            )
+            .then(() => sync.bootstrap({ fatal: false }))
+            .then(() =>
+              toast.show({
+                title: `Privacy ${next ? "enabled" : "disabled"}`,
+                message: next
+                  ? "Attached text files will be anonymized."
+                  : "Attached files will be sent without privacy filtering.",
+                variant: next ? "info" : "warning",
+              }),
+            )
+            .catch(toast.error)
+          dialog.clear()
         },
       },
       {

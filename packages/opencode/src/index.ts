@@ -34,7 +34,7 @@ const args = hideBin(process.argv)
 
 function show(out: string) {
   const text = out.trimStart()
-  if (!text.startsWith("opencode ")) {
+  if (!text.startsWith("bogu ")) {
     process.stderr.write(UI.logo() + EOL + EOL)
     process.stderr.write(text + EOL)
     return
@@ -44,7 +44,7 @@ function show(out: string) {
 
 const cli = yargs(args)
   .parserConfiguration({ "populate--": true })
-  .scriptName("opencode")
+  .scriptName("bogu")
   .wrap(100)
   .help("help", "show help")
   .alias("help", "h")
@@ -63,12 +63,17 @@ const cli = yargs(args)
     describe: "run without external plugins",
     type: "boolean",
   })
+  .option("privacy", {
+    describe: "enable attachment privacy filtering (use --no-privacy to disable)",
+    type: "boolean",
+  })
   .middleware(async (opts) => {
     if (opts.printLogs) process.env.OPENCODE_PRINT_LOGS = "1"
     if (opts.logLevel) process.env.OPENCODE_LOG_LEVEL = opts.logLevel
     if (opts.pure) {
       process.env.OPENCODE_PURE = "1"
     }
+    if (opts.privacy !== undefined) process.env.BOGU_PRIVACY_ENABLED = opts.privacy ? "1" : "0"
 
     Heap.start()
 
