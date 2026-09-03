@@ -1,152 +1,201 @@
 # Bogu
 
-Bogu is an unofficial privacy-focused fork of OpenCode. It anonymizes sensitive information in attached text files before the files reach the configured coding-model provider, then restores placeholders locally in responses and tool calls.
+Bogu is a privacy-focused AI coding agent built as an unofficial fork of [OpenCode](https://github.com/anomalyco/opencode). It anonymizes sensitive information in attached text files before the files reach your coding-model provider, then restores the original values locally in responses and tool calls.
 
-> Bogu is an independent project and is not affiliated with or endorsed by the OpenCode team or OpenAI.
+The privacy layer uses OpenAI's open-weight [`privacy-filter`](https://huggingface.co/openai/privacy-filter) model through either:
 
-See [Bogu privacy setup](docs/BOGU_PRIVACY.md) for local inference, Hugging Face inference, configuration, auditing, and security limitations.
+- Local inference, so file contents stay on your machine.
+- Hugging Face Inference, for easier setup without running the classifier locally.
 
-## Development build
+> Bogu is an independent project and is not affiliated with or endorsed by the OpenCode team, OpenAI, or Hugging Face.
+
+## How it works
+
+```text
+Attached text file
+       │
+       ▼
+OpenAI privacy-filter
+       │
+       ▼
+Sensitive spans → <BOGU_PRIVACY_PRIVATE_EMAIL_000001>
+       │
+       ▼
+Anonymized content sent to the coding model
+       │
+       ▼
+Placeholders restored locally in responses and tool calls
+```
+
+Placeholder mappings are isolated per Bogu session, held only in memory, never sent to the coding-model provider, and discarded when Bogu exits.
+
+Only attached text-file content is filtered. Ordinary chat messages, system prompts, binary/media attachments, and general tool output are currently outside the filter scope.
+
+## Privacy controls
+
+Privacy filtering is enabled by default. Toggle it from the full terminal UI:
+
+```text
+/privacy
+```
+
+Or override it for one run:
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/bogu.git
+bogu --privacy
+bogu --no-privacy
+```
+
+Set the persistent project default in `opencode.json`:
+
+```json
+{
+  "privacy": {
+    "enabled": true,
+    "backend": "local",
+    "scope": "attachments",
+    "executable": "/absolute/path/to/opf-local"
+  }
+}
+```
+
+## Local privacy model
+
+Local inference is the recommended mode when original file contents must not leave your machine.
+
+Build or install the companion `opf-local` executable, put it on `PATH`, and configure Bogu:
+
+```json
+{
+  "privacy": {
+    "enabled": true,
+    "backend": "local",
+    "executable": "/absolute/path/to/opf-local"
+  }
+}
+```
+
+You can override the executable for one run:
+
+```bash
+BOGU_PRIVACY_FILTER=/absolute/path/to/opf-local bogu
+```
+
+The executable receives UTF-8 text over stdin and must support:
+
+```bash
+opf-local --format json --no-print-color-coded-text
+```
+
+See [the complete privacy setup](docs/BOGU_PRIVACY.md) for its JSON output contract.
+
+## Hugging Face inference
+
+The Hugging Face backend sends original attached text to Hugging Face for privacy classification. Use local inference if that is not acceptable for your threat model.
+
+Create a Hugging Face token with **Inference Providers** permission, export it, and copy the example configuration:
+
+```bash
+export HF_TOKEN=hf_your_token
+cp opencode.example.json opencode.json
+./bogu
+```
+
+The configuration references the environment variable, keeping the actual secret out of Git:
+
+```json
+{
+  "privacy": {
+    "enabled": true,
+    "backend": "huggingface",
+    "scope": "attachments",
+    "api_key": "{env:HF_TOKEN}",
+    "model": "openai/privacy-filter"
+  }
+}
+```
+
+Never commit an actual Hugging Face token.
+
+## Audit anonymized requests
+
+To inspect the anonymized file text sent to the coding model:
+
+```bash
+BOGU_PRIVACY_LOG=/tmp/bogu-privacy.jsonl ./bogu
+tail -f /tmp/bogu-privacy.jsonl | jq .
+```
+
+The audit log does not include API tokens or the placeholder mapping. It can still contain private information the classifier failed to detect, so handle it as sensitive data.
+
+## Build from source
+
+Requirements:
+
+- [Bun](https://bun.sh/)
+- Git
+- A configured coding-model provider supported by OpenCode
+- Optionally, a local `opf-local` executable or a Hugging Face token
+
+```bash
+git clone https://github.com/abdullahalsaidi16/bogu.git
 cd bogu
 bun install
 cd packages/opencode
 bun run script/build.ts --single --skip-install --skip-embed-web-ui
-./dist/opencode-$(uname -s | tr '[:upper:]' '[:lower:]')-arm64/bin/bogu --version
 ```
 
-The upstream OpenCode README follows for attribution and general usage documentation.
-
----
-
-<p align="center">
-  <a href="https://opencode.ai">
-    <picture>
-      <source srcset="packages/console/app/src/asset/logo-ornate-dark.svg" media="(prefers-color-scheme: dark)">
-      <source srcset="packages/console/app/src/asset/logo-ornate-light.svg" media="(prefers-color-scheme: light)">
-      <img src="packages/console/app/src/asset/logo-ornate-light.svg" alt="OpenCode logo">
-    </picture>
-  </a>
-</p>
-<p align="center">The open source AI coding agent.</p>
-<p align="center">
-  <a href="https://opencode.ai/discord"><img alt="Discord" src="https://img.shields.io/discord/1391832426048651334?style=flat-square&label=discord" /></a>
-  <a href="https://www.npmjs.com/package/opencode-ai"><img alt="npm" src="https://img.shields.io/npm/v/opencode-ai?style=flat-square" /></a>
-  <a href="https://github.com/anomalyco/opencode/actions/workflows/publish.yml"><img alt="Build status" src="https://img.shields.io/github/actions/workflow/status/anomalyco/opencode/publish.yml?style=flat-square&branch=dev" /></a>
-</p>
-
-<p align="center">
-  <a href="README.md">English</a> |
-  <a href="README.zh.md">简体中文</a> |
-  <a href="README.zht.md">繁體中文</a> |
-  <a href="README.ko.md">한국어</a> |
-  <a href="README.de.md">Deutsch</a> |
-  <a href="README.es.md">Español</a> |
-  <a href="README.fr.md">Français</a> |
-  <a href="README.it.md">Italiano</a> |
-  <a href="README.da.md">Dansk</a> |
-  <a href="README.ja.md">日本語</a> |
-  <a href="README.pl.md">Polski</a> |
-  <a href="README.ru.md">Русский</a> |
-  <a href="README.bs.md">Bosanski</a> |
-  <a href="README.ar.md">العربية</a> |
-  <a href="README.no.md">Norsk</a> |
-  <a href="README.br.md">Português (Brasil)</a> |
-  <a href="README.th.md">ไทย</a> |
-  <a href="README.tr.md">Türkçe</a> |
-  <a href="README.uk.md">Українська</a> |
-  <a href="README.bn.md">বাংলা</a> |
-  <a href="README.gr.md">Ελληνικά</a> |
-  <a href="README.vi.md">Tiếng Việt</a>
-</p>
-
-[![OpenCode Terminal UI](packages/web/src/assets/lander/screenshot.png)](https://opencode.ai)
-
----
-
-### Installation
+On Apple Silicon, run the development build with:
 
 ```bash
-# YOLO
-curl -fsSL https://opencode.ai/install | bash
-
-# Package managers
-npm i -g opencode-ai@latest        # or bun/pnpm/yarn
-scoop install opencode             # Windows
-choco install opencode             # Windows
-brew install anomalyco/tap/opencode # macOS and Linux (recommended, always up to date)
-brew install opencode              # macOS and Linux (official brew formula, updated less)
-sudo pacman -S opencode            # Arch Linux (Stable)
-paru -S opencode-bin               # Arch Linux (Latest from AUR)
-mise use -g opencode               # Any OS
-nix run nixpkgs#opencode           # or github:anomalyco/opencode for latest dev branch
+./dist/opencode-darwin-arm64/bin/bogu
 ```
 
-> [!TIP]
-> Remove versions older than 0.1.x before installing.
-
-### Desktop App (BETA)
-
-OpenCode is also available as a desktop application. Download directly from the [releases page](https://github.com/anomalyco/opencode/releases) or [opencode.ai/download](https://opencode.ai/download).
-
-| Platform              | Download                           |
-| --------------------- | ---------------------------------- |
-| macOS (Apple Silicon) | `opencode-desktop-mac-arm64.dmg`   |
-| macOS (Intel)         | `opencode-desktop-mac-x64.dmg`     |
-| Windows               | `opencode-desktop-windows-x64.exe` |
-| Linux                 | `.deb`, `.rpm`, or `.AppImage`     |
+During local development, you can also run:
 
 ```bash
-# macOS (Homebrew)
-brew install --cask opencode-desktop
-# Windows (Scoop)
-scoop bucket add extras; scoop install extras/opencode-desktop
+cd packages/opencode
+bun run --conditions=browser src/index.ts
 ```
 
-#### Installation Directory
+## Configuration reference
 
-The install script respects the following priority order for the installation path:
+| Setting | Default | Description |
+| --- | --- | --- |
+| `privacy.enabled` | `true` | Enables attachment filtering |
+| `privacy.backend` | `local` | `local` or `huggingface` |
+| `privacy.scope` | `attachments` | Current supported filtering scope |
+| `privacy.executable` | `opf-local` | Local backend executable |
+| `privacy.api_key` | `HF_TOKEN` | Hugging Face access token; prefer `{env:HF_TOKEN}` |
+| `privacy.model` | `openai/privacy-filter` | Hugging Face model ID |
+| `privacy.endpoint` | Hugging Face router | API-compatible inference endpoint |
+| `privacy.log` | disabled | Optional JSONL audit-log path |
 
-1. `$OPENCODE_INSTALL_DIR` - Custom installation directory
-2. `$XDG_BIN_DIR` - XDG Base Directory Specification compliant path
-3. `$HOME/bin` - Standard user binary directory (if it exists or can be created)
-4. `$HOME/.opencode/bin` - Default fallback
+See [docs/BOGU_PRIVACY.md](docs/BOGU_PRIVACY.md) for detailed setup and behavior.
+
+## Security limitations
+
+PII detection is probabilistic. Bogu's privacy layer reduces accidental disclosure but does not guarantee that every secret or personal identifier will be detected. Evaluate the classifier using representative data before relying on it for sensitive medical, legal, financial, government, or production workloads.
+
+The current mapping is memory-only. A response from an older session cannot be de-anonymized after Bogu restarts.
+
+## Development
+
+Run the focused privacy tests and package type checks:
 
 ```bash
-# Examples
-OPENCODE_INSTALL_DIR=/usr/local/bin curl -fsSL https://opencode.ai/install | bash
-XDG_BIN_DIR=$HOME/.local/bin curl -fsSL https://opencode.ai/install | bash
+cd packages/opencode
+bun test test/session/privacy.test.ts
+bun typecheck
+
+cd ../tui
+bun typecheck
 ```
 
-### Agents
+Contributions and security reports are welcome. Please avoid including real credentials or personal information in issues, fixtures, and logs.
 
-OpenCode includes two built-in agents you can switch between with the `Tab` key.
+## Upstream and license
 
-- **build** - Default, full-access agent for development work
-- **plan** - Read-only agent for analysis and code exploration
-  - Denies file edits by default
-  - Asks permission before running bash commands
-  - Ideal for exploring unfamiliar codebases or planning changes
+Bogu is based on [anomalyco/opencode](https://github.com/anomalyco/opencode). The fork keeps upstream Git history to preserve attribution and make future updates easier to merge.
 
-Also included is a **general** subagent for complex searches and multistep tasks.
-This is used internally and can be invoked using `@general` in messages.
-
-Learn more about [agents](https://opencode.ai/docs/agents).
-
-### Documentation
-
-For more info on how to configure OpenCode, [**head over to our docs**](https://opencode.ai/docs).
-
-### Contributing
-
-If you're interested in contributing to OpenCode, please read our [contributing docs](./CONTRIBUTING.md) before submitting a pull request.
-
-### Building on OpenCode
-
-If you are working on a project that's related to OpenCode and is using "opencode" as part of its name, for example "opencode-dashboard" or "opencode-mobile", please add a note to your README to clarify that it is not built by the OpenCode team and is not affiliated with us in any way.
-
----
-
-**Join our community** [Discord](https://discord.gg/opencode) | [X.com](https://x.com/opencode)
+Released under the [MIT License](LICENSE), matching the upstream project.
