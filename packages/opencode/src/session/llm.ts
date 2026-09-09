@@ -30,6 +30,8 @@ import { LLMAISDK } from "./llm/ai-sdk"
 import { LLMNativeRuntime } from "./llm/native-runtime"
 import { LLMRequestPrep } from "./llm/request"
 import { SessionPrivacy } from "./privacy"
+import { PrivacyInstallation } from "@/privacy"
+import { existsSync } from "node:fs"
 
 export const OUTPUT_TOKEN_MAX = ProviderTransform.OUTPUT_TOKEN_MAX
 
@@ -138,7 +140,11 @@ const live: Layer.Layer<
             : {
                 backend,
                 executable:
-                  process.env.BOGU_PRIVACY_FILTER ?? privacyConfig?.executable ?? "opf-local",
+                  process.env.BOGU_PRIVACY_FILTER ??
+                  privacyConfig?.executable ??
+                  (existsSync(PrivacyInstallation.paths().executable)
+                    ? PrivacyInstallation.paths().executable
+                    : "opf-local"),
                 logPath,
               }
         if (options.backend === "huggingface" && !options.apiKey)

@@ -1,6 +1,8 @@
 import { LLMEvent, type LLMEvent as Event } from "@opencode-ai/llm"
 import type { ModelMessage, Tool } from "ai"
-import { appendFile } from "node:fs/promises"
+import { appendFile, mkdtemp, rm, writeFile } from "node:fs/promises"
+import os from "node:os"
+import path from "node:path"
 
 type Span = {
   label: string
@@ -184,21 +186,25 @@ export class PrivacyFilter {
 
   private async local(text: string): Promise<Result> {
     if (this.options.backend !== "local") throw new Error("invalid local privacy backend")
-    const process = Bun.spawn([this.options.executable, "--format", "json", "--no-print-color-coded-text"], {
-      stdin: "pipe",
-      stdout: "pipe",
-      stderr: "pipe",
-    })
-    process.stdin.write(text)
-    process.stdin.end()
-    const timeout = setTimeout(() => process.kill(), 30_000)
-    const [output, error, exit] = await Promise.all([
-      new Response(process.stdout).text(),
-      new Response(process.stderr).text(),
-      process.exited,
-    ]).finally(() => clearTimeout(timeout))
-    if (exit !== 0) throw new Error(`privacy filter failed (${exit}): ${error.trim()}`)
-    return this.parseResult(output)
+    const dir = await mkdtemp(path.join(os.tmpdir(), "bogu-privacy-"))
+    const file = path.join(dir, "attachment.txt")
+    try {
+      await writeFile(file, text, { encoding: "utf8", mode: 0o600 })
+      const process = Bun.spawn(
+        [this.options.executable, "--format", "json", "--no-print-color-coded-text", "-f", file],
+        { stdout: "pipe", stderr: "pipe" },
+      )
+      const timeout = setTimeout(() => process.kill(), 30_000)
+      const [output, error, exit] = await Promise.all([
+        new Response(process.stdout).text(),
+        new Response(process.stderr).text(),
+        process.exited,
+      ]).finally(() => clearTimeout(timeout))
+      if (exit !== 0) throw new Error(`privacy filter failed (${exit}): ${error.trim()}`)
+      return this.parseResult(output)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   }
 
   private async huggingFace(text: string): Promise<Result> {

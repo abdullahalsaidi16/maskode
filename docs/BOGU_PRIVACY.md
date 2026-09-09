@@ -34,6 +34,15 @@ For compatibility with early Bogu builds, `BOGU_PRIVACY_FILTER=off bogu` also di
 
 The local backend keeps attached file content on your machine. Build or install the companion `opf-local` executable and either put it on `PATH` or configure its absolute path as shown above.
 
+For a managed installation:
+
+```bash
+bogu privacy install
+bogu privacy status
+```
+
+Bogu downloads the public model without requiring `HF_TOKEN`, installs it under `~/.local/share/bogu/privacy`, and discovers it automatically. Python 3.10 or newer is required; the standard macOS installer can install Python 3.12 through Homebrew.
+
 The executable must accept UTF-8 text on stdin and support:
 
 ```bash

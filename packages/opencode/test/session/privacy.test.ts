@@ -13,7 +13,8 @@ describe("session privacy", () => {
     await Bun.write(
       executable,
       `#!/bin/sh
-input=$(cat)
+for input_file do :; done
+input=$(cat "$input_file")
 [ "$input" = "My name is Alice" ] || exit 2
 printf '%s\n' 'model loading diagnostic'
 printf '%s' '{"schema_version":1,"detected_spans":[{"label":"private_person","start":11,"end":16,"text":"Alice","placeholder":"<PRIVATE_PERSON>"}],"redacted_text":"My name is <PRIVATE_PERSON>"}'

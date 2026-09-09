@@ -563,7 +563,7 @@
       "name": "opencode",
       "version": "1.18.27",
       "bin": {
-        "opencode": "./bin/opencode",
+        "bogu": "./bin/bogu",
       },
       "dependencies": {
         "@actions/core": "1.11.1",

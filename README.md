@@ -9,27 +9,95 @@ The privacy layer uses OpenAI's open-weight [`privacy-filter`](https://huggingfa
 
 > Bogu is an independent project and is not affiliated with or endorsed by the OpenCode team, OpenAI, or Hugging Face.
 
+## Get started
+
+Choose how Bogu should run the privacy classifier:
+
+| Mode | Best for | What leaves your computer? | Setup |
+| --- | --- | --- | --- |
+| **Local** | Maximum privacy | Only anonymized file text reaches the coding-model provider | Downloads approximately 3.4 GB |
+| **Hugging Face** | Lightweight setup | Original attached text is sent to Hugging Face for classification | Requires `HF_TOKEN` |
+
+### Option 1: local privacy (recommended)
+
+The standard installer downloads Bogu and prepares the local privacy model:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/abdullahalsaidi16/bogu/dev/install.sh | sh
+```
+
+Then launch it:
+
+```bash
+bogu
+```
+
+### Option 2: Hugging Face privacy
+
+Install Bogu without the large local model:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/abdullahalsaidi16/bogu/dev/install.sh | sh -s -- --without-privacy-model
+```
+
+Create an `opencode.json` from the included example and provide your token:
+
+```bash
+export HF_TOKEN=hf_your_token
+cp opencode.example.json opencode.json
+bogu
+```
+
 ## How it works
 
+```mermaid
+flowchart TD
+    A[User attaches a text file] --> B[Bogu reads the attachment locally]
+    B --> C{Privacy enabled?}
+    C -- No --> H[Coding-model provider]
+    C -- Yes --> D{Privacy backend}
+    D -- Local --> E[Local OpenAI privacy-filter]
+    D -- Hugging Face --> F[Hugging Face token-classification API]
+    E --> G[Replace sensitive spans with stable placeholders]
+    F --> G
+    G --> I[Store placeholder mapping in session memory]
+    I --> H
+    H --> J[Model response and tool calls]
+    J --> K[Restore original values locally]
+    K --> L[Display result to user]
+```
+
+For example:
+
 ```text
-Attached text file
-       │
-       ▼
-OpenAI privacy-filter
-       │
-       ▼
-Sensitive spans → <BOGU_PRIVACY_PRIVATE_EMAIL_000001>
-       │
-       ▼
-Anonymized content sent to the coding model
-       │
-       ▼
-Placeholders restored locally in responses and tool calls
+Original attachment:  Contact Alice at alice@example.com
+Sent to provider:      Contact <BOGU_PRIVACY_PRIVATE_PERSON_000001>
+                      at <BOGU_PRIVACY_PRIVATE_EMAIL_000001>
+Displayed response:    Contact Alice at alice@example.com
 ```
 
 Placeholder mappings are isolated per Bogu session, held only in memory, never sent to the coding-model provider, and discarded when Bogu exits.
 
 Only attached text-file content is filtered. Ordinary chat messages, system prompts, binary/media attachments, and general tool output are currently outside the filter scope.
+
+## Verify your setup
+
+Check that the managed model is available:
+
+```bash
+bogu privacy status
+```
+
+Create a synthetic demonstration file and run one request:
+
+```bash
+printf 'Contact Alice Smith at alice@example.com.\n' > privacy-demo.txt
+BOGU_PRIVACY_LOG=/tmp/bogu-privacy.jsonl \
+  bogu run --privacy "Summarize the attached contact." --file privacy-demo.txt
+tail -1 /tmp/bogu-privacy.jsonl | jq .
+```
+
+The audit event's `providerText` should contain Bogu placeholders rather than the name and email.
 
 ## Privacy controls
 
@@ -62,6 +130,15 @@ Set the persistent project default in `opencode.json`:
 ## Local privacy model
 
 Local inference is the recommended mode when original file contents must not leave your machine.
+
+For an existing Bogu installation, setup is one command:
+
+```bash
+bogu privacy install
+bogu privacy status
+```
+
+Bogu stores the managed runtime under `~/.local/share/bogu/privacy` and discovers it automatically. Use `bogu privacy update` to refresh it or `bogu privacy uninstall` to remove it.
 
 Build or install the companion `opf-local` executable, put it on `PATH`, and configure Bogu:
 

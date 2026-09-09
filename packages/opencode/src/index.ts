@@ -29,6 +29,7 @@ import { DbCommand } from "./cli/cmd/db"
 import { errorMessage } from "./util/error"
 import { PluginCommand } from "./cli/cmd/plug"
 import { Heap } from "./cli/heap"
+import { PrivacyCommand } from "./cli/cmd/privacy"
 
 const args = hideBin(process.argv)
 
@@ -85,6 +86,7 @@ const cli = yargs(args)
   .completion("completion", "generate shell completion script")
   .command(AcpCommand)
   .command(McpCommand)
+  .command(PrivacyCommand)
   .command(TuiThreadCommand)
   .command(AttachCommand)
   .command(RunCommand)

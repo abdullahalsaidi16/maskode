@@ -16,7 +16,7 @@
     "dev:temporary": "bun run ./src/temporary.ts"
   },
   "bin": {
-	"bogu": "./bin/bogu"
+    "bogu": "./bin/bogu"
   },
   "exports": {
     "./*": "./src/*.ts"
