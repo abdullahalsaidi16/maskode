@@ -101,11 +101,15 @@ The audit event's `providerText` should contain Bogu placeholders rather than th
 
 ## Privacy controls
 
-Privacy filtering is enabled by default. Toggle it from the full terminal UI:
+Privacy filtering for attached text files is enabled by default. Open the privacy controls from the full terminal UI:
 
 ```text
 /privacy
 ```
+
+The dialog shows the current attachment-privacy status as `Enabled` or `Disabled`. Opening it does not change the setting. Use the dialog's displayed `enable` or `disable` action to change the setting, similar to managing servers with `/mcps`.
+
+This control applies only to attached text files. It does not anonymize text typed directly into the chat.
 
 Or override it for one run:
 

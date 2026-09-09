@@ -42,6 +42,7 @@ import { PermissionProvider } from "./context/permission"
 import { DialogModel } from "./component/dialog-model"
 import { useConnected } from "./component/use-connected"
 import { DialogMcp } from "./component/dialog-mcp"
+import { DialogPrivacy } from "./component/dialog-privacy"
 import { DialogStatus } from "./component/dialog-status"
 import { DialogDebug } from "./component/dialog-debug"
 import { DialogThemeList } from "./component/dialog-theme-list"
@@ -694,36 +695,11 @@ function App(props: { onSnapshot?: () => Promise<string[]>; pluginHost: TuiPlugi
       },
       {
         name: "privacy.toggle",
-        title: "Toggle attachment privacy",
+        title: "Manage attachment privacy",
         category: "System",
         slashName: "privacy",
-        run: async () => {
-          const config = sync.data.config as { privacy?: { enabled?: boolean } }
-          const enabled = config.privacy?.enabled !== false
-          const next = !enabled
-          const workspace = project.workspace.current()
-          await sdk.client.config
-            .update(
-              {
-                workspace,
-                // Send only this patch. The synchronized config may contain
-                // resolved {env:...} secrets and must not be written back.
-                config: { privacy: { enabled: next } } as never,
-              },
-              { throwOnError: true },
-            )
-            .then(() => sync.bootstrap({ fatal: false }))
-            .then(() =>
-              toast.show({
-                title: `Privacy ${next ? "enabled" : "disabled"}`,
-                message: next
-                  ? "Attached text files will be anonymized."
-                  : "Attached files will be sent without privacy filtering.",
-                variant: next ? "info" : "warning",
-              }),
-            )
-            .catch(toast.error)
-          dialog.clear()
+        run: () => {
+          dialog.replace(() => <DialogPrivacy />)
         },
       },
       {
