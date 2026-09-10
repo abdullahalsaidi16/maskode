@@ -117,16 +117,17 @@ const live: Layer.Layer<
       })
       const privacyConfig = cfg.privacy
       const privacy = (() => {
-        const privacyOverride = process.env.BOGU_PRIVACY_ENABLED
+        const privacyOverride = process.env.MASKODE_PRIVACY_ENABLED ?? process.env.BOGU_PRIVACY_ENABLED
+        const privacyExecutable = process.env.MASKODE_PRIVACY_FILTER ?? process.env.BOGU_PRIVACY_FILTER
         if (
-          process.env.BOGU_PRIVACY_FILTER === "off" ||
+          privacyExecutable === "off" ||
           privacyOverride === "0" ||
           (privacyOverride !== "1" && privacyConfig?.enabled === false)
         )
           return
         const existing = privacyFilters.get(input.sessionID)
         if (existing) return existing
-        const logPath = process.env.BOGU_PRIVACY_LOG ?? privacyConfig?.log
+        const logPath = process.env.MASKODE_PRIVACY_LOG ?? process.env.BOGU_PRIVACY_LOG ?? privacyConfig?.log
         const backend = privacyConfig?.backend ?? "local"
         const options: SessionPrivacy.Options =
           backend === "huggingface"
@@ -140,15 +141,17 @@ const live: Layer.Layer<
             : {
                 backend,
                 executable:
-                  process.env.BOGU_PRIVACY_FILTER ??
+                  privacyExecutable ??
                   privacyConfig?.executable ??
                   (existsSync(PrivacyInstallation.paths().executable)
                     ? PrivacyInstallation.paths().executable
-                    : "opf-local"),
+                    : existsSync(PrivacyInstallation.legacyPaths().executable)
+                      ? PrivacyInstallation.legacyPaths().executable
+                      : "opf-local"),
                 logPath,
               }
         if (options.backend === "huggingface" && !options.apiKey)
-          throw new Error("Bogu Hugging Face privacy backend requires HF_TOKEN or privacy.api_key")
+          throw new Error("Maskode Hugging Face privacy backend requires HF_TOKEN or privacy.api_key")
         const created = new SessionPrivacy.PrivacyFilter(options)
         privacyFilters.set(input.sessionID, created)
         return created
@@ -158,7 +161,8 @@ const live: Layer.Layer<
             ...prepared,
             messages: yield* Effect.tryPromise({
               try: () => privacy.redactMessages(prepared.messages),
-              catch: (error) => new Error(`Bogu privacy filter failed: ${error instanceof Error ? error.message : String(error)}`),
+              catch: (error) =>
+                new Error(`Maskode privacy filter failed: ${error instanceof Error ? error.message : String(error)}`),
             }),
             tools: privacy.wrapTools(prepared.tools),
           }

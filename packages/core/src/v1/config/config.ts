@@ -142,7 +142,7 @@ export const Info = Schema.Struct({
       log: Schema.optional(Schema.String),
     }),
   ).annotate({
-    description: "Bogu privacy filtering for text file attachments",
+    description: "Maskode privacy filtering for text file attachments",
   }),
   enterprise: Schema.optional(
     Schema.Struct({ url: Schema.optional(Schema.String).annotate({ description: "Enterprise URL" }) }),

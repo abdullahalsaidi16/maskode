@@ -6,6 +6,6 @@
     "scope": "attachments",
     "api_key": "{env:HF_TOKEN}",
     "model": "openai/privacy-filter",
-    "log": "/tmp/bogu-privacy.jsonl"
+    "log": "/tmp/maskode-privacy.jsonl"
   }
 }

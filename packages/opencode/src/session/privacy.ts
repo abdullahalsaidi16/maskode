@@ -159,7 +159,7 @@ export class PrivacyFilter {
         const key = `${span.label}\0${original}`
         const existing = this.values.get(key)
         const count = (this.counters.get(span.label) ?? 0) + 1
-        const placeholder = existing ?? `<BOGU_PRIVACY_${span.label.toUpperCase()}_${String(count).padStart(6, "0")}>`
+        const placeholder = existing ?? `<MASKODE_PRIVACY_${span.label.toUpperCase()}_${String(count).padStart(6, "0")}>`
         if (!existing) {
           this.counters.set(span.label, count)
           this.values.set(key, placeholder)
@@ -186,7 +186,7 @@ export class PrivacyFilter {
 
   private async local(text: string): Promise<Result> {
     if (this.options.backend !== "local") throw new Error("invalid local privacy backend")
-    const dir = await mkdtemp(path.join(os.tmpdir(), "bogu-privacy-"))
+    const dir = await mkdtemp(path.join(os.tmpdir(), "maskode-privacy-"))
     const file = path.join(dir, "attachment.txt")
     try {
       await writeFile(file, text, { encoding: "utf8", mode: 0o600 })

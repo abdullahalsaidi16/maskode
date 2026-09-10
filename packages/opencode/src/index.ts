@@ -35,7 +35,7 @@ const args = hideBin(process.argv)
 
 function show(out: string) {
   const text = out.trimStart()
-  if (!text.startsWith("bogu ")) {
+  if (!text.startsWith("maskode ")) {
     process.stderr.write(UI.logo() + EOL + EOL)
     process.stderr.write(text + EOL)
     return
@@ -45,7 +45,7 @@ function show(out: string) {
 
 const cli = yargs(args)
   .parserConfiguration({ "populate--": true })
-  .scriptName("bogu")
+  .scriptName("maskode")
   .wrap(100)
   .help("help", "show help")
   .alias("help", "h")
@@ -74,7 +74,7 @@ const cli = yargs(args)
     if (opts.pure) {
       process.env.OPENCODE_PURE = "1"
     }
-    if (opts.privacy !== undefined) process.env.BOGU_PRIVACY_ENABLED = opts.privacy ? "1" : "0"
+    if (opts.privacy !== undefined) process.env.MASKODE_PRIVACY_ENABLED = opts.privacy ? "1" : "0"
 
     Heap.start()
 

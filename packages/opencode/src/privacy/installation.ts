@@ -7,8 +7,18 @@ export const MODEL_ID = "openai/privacy-filter"
 export const DEFAULT_REF = "f7f00ca7fb869683eb732c010299d901457f19c3"
 
 export function root() {
+  const data =
+    process.env.MASKODE_DATA_DIR ??
+    process.env.BOGU_DATA_DIR ??
+    process.env.XDG_DATA_HOME ??
+    path.join(os.homedir(), ".local", "share")
+  return path.join(data, "maskode", "privacy")
+}
+
+export function legacyPaths() {
   const data = process.env.BOGU_DATA_DIR ?? process.env.XDG_DATA_HOME ?? path.join(os.homedir(), ".local", "share")
-  return path.join(data, "bogu", "privacy")
+  const dir = path.join(data, "bogu", "privacy")
+  return { executable: path.join(dir, "opf-local") }
 }
 
 export function paths() {
@@ -36,9 +46,16 @@ async function run(command: string[], cwd?: string) {
 }
 
 function pythonVersion(executable: string) {
-  const result = Bun.spawnSync([executable, "-c", "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"])
+  const result = Bun.spawnSync([
+    executable,
+    "-c",
+    "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')",
+  ])
   if (result.exitCode !== 0) return
-  const match = result.stdout.toString().trim().match(/^(\d+)\.(\d+)$/)
+  const match = result.stdout
+    .toString()
+    .trim()
+    .match(/^(\d+)\.(\d+)$/)
   if (!match) return
   return { major: Number(match[1]), minor: Number(match[2]) }
 }
@@ -59,7 +76,8 @@ function compatiblePython(requested?: string) {
 }
 
 export async function install(input: { ref?: string; python?: string; refresh?: boolean } = {}) {
-  if (process.platform === "win32") throw new Error("managed local privacy installation currently supports macOS and Linux")
+  if (process.platform === "win32")
+    throw new Error("managed local privacy installation currently supports macOS and Linux")
   const item = paths()
   const ref = input.ref ?? DEFAULT_REF
   const python = compatiblePython(input.python)
@@ -113,7 +131,8 @@ exec "$root/.venv/bin/opf" --device cpu "$@"
   await fs.chmod(item.executable, 0o700)
   await Bun.write(
     item.metadata,
-    JSON.stringify({ schema: 1, source: "https://github.com/openai/privacy-filter", ref, model: MODEL_ID }, null, 2) + "\n",
+    JSON.stringify({ schema: 1, source: "https://github.com/openai/privacy-filter", ref, model: MODEL_ID }, null, 2) +
+      "\n",
   )
   return item
 }

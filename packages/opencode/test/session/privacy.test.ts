@@ -36,7 +36,7 @@ printf '%s' '{"schema_version":1,"detected_spans":[{"label":"private_person","st
     expect(messages[0]).toEqual(chat)
     expect(messages[1]?.content).toEqual([
       { type: "text", text: 'Called the Read tool with the following input: {"filePath":"contact.txt"}' },
-      { type: "text", text: "My name is <BOGU_PRIVACY_PRIVATE_PERSON_000001>" },
+      { type: "text", text: "My name is <MASKODE_PRIVACY_PRIVATE_PERSON_000001>" },
     ])
     const audit = JSON.parse(await Bun.file(log).text())
     expect(audit).toMatchObject({
@@ -44,13 +44,13 @@ printf '%s' '{"schema_version":1,"detected_spans":[{"label":"private_person","st
       backend: "local",
       detected: ["private_person"],
       inputCharacters: 16,
-      providerText: "My name is <BOGU_PRIVACY_PRIVATE_PERSON_000001>",
+      providerText: "My name is <MASKODE_PRIVACY_PRIVATE_PERSON_000001>",
     })
 
     expect(
       privacy.restoreEvents([
         LLMEvent.textStart({ id: "text" }),
-        LLMEvent.textDelta({ id: "text", text: "Hello <BOGU_PRIVACY_" }),
+        LLMEvent.textDelta({ id: "text", text: "Hello <MASKODE_PRIVACY_" }),
         LLMEvent.textDelta({ id: "text", text: "PRIVATE_PERSON_000001>" }),
         LLMEvent.textEnd({ id: "text" }),
       ]),
@@ -88,7 +88,7 @@ printf '%s' '{"schema_version":1,"detected_spans":[{"label":"private_person","st
       expect(request?.headers.get("authorization")).toBe("Bearer hf_test")
       expect(messages[0]?.content).toEqual([
         { type: "text", text: 'Called the Read tool with the following input: {"filePath":"contact.txt"}' },
-        { type: "text", text: "Email <BOGU_PRIVACY_PRIVATE_EMAIL_000001>" },
+        { type: "text", text: "Email <MASKODE_PRIVACY_PRIVATE_EMAIL_000001>" },
       ])
     } finally {
       globalThis.fetch = originalFetch

@@ -1,6 +1,6 @@
-# Bogu privacy layer
+# Maskode privacy layer
 
-Bogu is an unofficial fork of OpenCode that anonymizes sensitive spans in attached text files before those files are sent to the coding model. It uses OpenAI's [`privacy-filter`](https://huggingface.co/openai/privacy-filter) and restores placeholders locally in model responses and tool arguments.
+Maskode is an unofficial fork of OpenCode that anonymizes sensitive spans in attached text files before those files are sent to the coding model. It uses OpenAI's [`privacy-filter`](https://huggingface.co/openai/privacy-filter) and restores placeholders locally in model responses and tool arguments.
 
 Only attached text-file content is filtered. Ordinary chat messages, binary/media attachments, system prompts, and general tool output are not filtered. Treat detection as defense in depth: a classifier can miss sensitive data.
 
@@ -22,13 +22,13 @@ Privacy is enabled by default. It can be controlled persistently in `opencode.js
 Or override it for one run:
 
 ```bash
-bogu --privacy
-bogu --no-privacy
+maskode --privacy
+maskode --no-privacy
 ```
 
-Inside the full TUI, run `/privacy` to toggle the setting. Bogu shows the new state and persists it for the current project. The update contains only the boolean toggle, so a resolved `HF_TOKEN` is never written back by this command.
+Inside the full TUI, run `/privacy` to open the attachment-privacy controls. The dialog shows the current state without changing it; use its `enable` or `disable` action to persist a new project setting. The update contains only the boolean setting, so a resolved `HF_TOKEN` is never written back by this command.
 
-For compatibility with early Bogu builds, `BOGU_PRIVACY_FILTER=off bogu` also disables filtering.
+`MASKODE_PRIVACY_FILTER=off maskode` also disables filtering. Legacy `BOGU_PRIVACY_*` environment variables and an existing Bogu managed-model installation remain supported as migration fallbacks.
 
 ## Local backend (recommended)
 
@@ -37,11 +37,11 @@ The local backend keeps attached file content on your machine. Build or install 
 For a managed installation:
 
 ```bash
-bogu privacy install
-bogu privacy status
+maskode privacy install
+maskode privacy status
 ```
 
-Bogu downloads the public model without requiring `HF_TOKEN`, installs it under `~/.local/share/bogu/privacy`, and discovers it automatically. Python 3.10 or newer is required; the standard macOS installer can install Python 3.12 through Homebrew.
+Maskode downloads the public model without requiring `HF_TOKEN`, installs it under `~/.local/share/maskode/privacy`, and discovers it automatically. Python 3.10 or newer is required; the standard macOS installer can install Python 3.12 through Homebrew.
 
 The executable must accept UTF-8 text on stdin and support:
 
@@ -49,12 +49,12 @@ The executable must accept UTF-8 text on stdin and support:
 opf-local --format json --no-print-color-coded-text
 ```
 
-Its stdout must include a JSON object containing `detected_spans`, where every span has `label`, `start`, and `end`. Bogu tolerates diagnostic lines around that JSON, although diagnostics should preferably go to stderr.
+Its stdout must include a JSON object containing `detected_spans`, where every span has `label`, `start`, and `end`. Maskode tolerates diagnostic lines around that JSON, although diagnostics should preferably go to stderr.
 
 You can also select the executable for one run:
 
 ```bash
-BOGU_PRIVACY_FILTER=/absolute/path/to/opf-local bogu
+MASKODE_PRIVACY_FILTER=/absolute/path/to/opf-local maskode
 ```
 
 ## Hugging Face backend
@@ -66,7 +66,7 @@ Create a Hugging Face token with Inference Providers permission, export it in yo
 ```bash
 export HF_TOKEN=hf_your_token
 cp opencode.example.json opencode.json
-bogu
+maskode
 ```
 
 `opencode.example.json` contains:
@@ -80,7 +80,7 @@ bogu
     "scope": "attachments",
     "api_key": "{env:HF_TOKEN}",
     "model": "openai/privacy-filter",
-    "log": "/tmp/bogu-privacy.jsonl"
+    "log": "/tmp/maskode-privacy.jsonl"
   }
 }
 ```
@@ -89,13 +89,13 @@ The default endpoint is `https://router.huggingface.co/hf-inference/models`. It 
 
 ## Audit the anonymized provider text
 
-Set `privacy.log` or `BOGU_PRIVACY_LOG`. The JSON Lines audit contains only the anonymized text and detected labels, never the placeholder mapping or API token:
+Set `privacy.log` or `MASKODE_PRIVACY_LOG`. The JSON Lines audit contains only the anonymized text and detected labels, never the placeholder mapping or API token:
 
 ```bash
-BOGU_PRIVACY_LOG=/tmp/bogu-privacy.jsonl bogu
-tail -f /tmp/bogu-privacy.jsonl | jq .
+MASKODE_PRIVACY_LOG=/tmp/maskode-privacy.jsonl maskode
+tail -f /tmp/maskode-privacy.jsonl | jq .
 ```
 
 The log can still contain sensitive text the classifier failed to detect, so protect or delete it appropriately.
 
-Placeholder mappings exist only in memory and are isolated per session. They are lost when Bogu exits and are never persisted.
+Placeholder mappings exist only in memory and are isolated per session. They are lost when Maskode exits and are never persisted.

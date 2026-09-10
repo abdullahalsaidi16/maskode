@@ -8,18 +8,18 @@ const InstallCommand = cmd({
   describe: "download and install the local privacy model",
   builder: (yargs: Argv) =>
     yargs
-      .option("ref", { type: "string", describe: "openai/privacy-filter Git ref (defaults to Bogu's tested revision)" })
+      .option("ref", { type: "string", describe: "openai/privacy-filter Git ref (defaults to Maskode's tested revision)" })
       .option("python", { type: "string", describe: "Python 3.10+ executable (auto-detected by default)" })
       .option("refresh", { type: "boolean", default: false, describe: "recreate the runtime environment" }),
   handler: async (args: { ref?: string; python?: string; refresh: boolean }) => {
-    prompts.intro("Bogu local privacy")
+    prompts.intro("Maskode local privacy")
     prompts.log.info("This downloads approximately 3.2 GB of model and runtime files.")
     prompts.log.step("Installing Python runtime dependencies and downloading the model...")
     try {
       const result = await PrivacyInstallation.install(args)
       prompts.log.success("Local privacy runtime installed")
       prompts.log.info(result.executable)
-      prompts.outro("Bogu will use this runtime automatically")
+      prompts.outro("Maskode will use this runtime automatically")
     } catch (error) {
       prompts.log.error(error instanceof Error ? error.message : String(error))
       prompts.outro("Installation failed")
@@ -44,7 +44,7 @@ const UpdateCommand = cmd({
   describe: "reinstall the latest local privacy runtime and model metadata",
   builder: (yargs: Argv) =>
     yargs
-      .option("ref", { type: "string", describe: "openai/privacy-filter Git ref (defaults to Bogu's tested revision)" })
+      .option("ref", { type: "string", describe: "openai/privacy-filter Git ref (defaults to Maskode's tested revision)" })
       .option("python", { type: "string", describe: "Python 3.10+ executable (auto-detected by default)" }),
   handler: (args: { ref?: string; python?: string }) => InstallCommand.handler({ ...args, refresh: true } as never),
 })
