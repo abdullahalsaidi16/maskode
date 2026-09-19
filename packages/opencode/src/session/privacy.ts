@@ -256,16 +256,21 @@ export class PrivacyFilter {
     const first = output.indexOf("{")
     const last = output.lastIndexOf("}")
     if (first !== -1 && last > first) candidates.push(output.slice(first, last + 1))
+    let failure: string | undefined
     for (const candidate of candidates) {
       try {
         const parsed = JSON.parse(candidate) as Partial<Result>
         if (Array.isArray(parsed.detected_spans)) return parsed as Result
-      } catch {
-        // Some local runners print model-loading diagnostics around the JSON.
+      } catch (error) {
+        // Some local runners print model-loading diagnostics around the JSON, so a
+        // rejected candidate is expected. Keep the reason for the fail-closed throw.
+        failure = error instanceof Error ? error.message : String(error)
       }
     }
     const preview = output.replace(/\s+/g, " ").trim().slice(0, 240)
-    throw new Error(`privacy filter returned invalid JSON${preview ? `: ${preview}` : ": empty stdout"}`)
+    throw new Error(
+      `privacy filter returned invalid JSON${preview ? `: ${preview}` : ": empty stdout"}${failure ? ` (${failure})` : ""}`,
+    )
   }
 }
 
