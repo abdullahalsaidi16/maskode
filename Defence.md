@@ -83,7 +83,7 @@ With `backend: "huggingface"`, the original text reaches a third party by design
 
 ### Repository-wide (last full scan)
 
-**5,490 open issues.** The overwhelming majority are in inherited OpenCode code, not in the fork's own changes.
+**5,490 open issues**, scanned against reference branch `2.0` — which is upstream OpenCode code, not this fork's `dev`. See the caveat below before drawing any conclusion from these numbers.
 
 | Severity / area | Count | Assessment |
 | --- | --- | --- |
@@ -103,11 +103,28 @@ These are upstream OpenCode surface. They are real and worth carrying upstream, 
 
 Full list: <https://norma.qualityclouds.com/repositories/10028>
 
-### Fork-owned files
+### The full scan never saw the privacy layer
 
-Scoped scan of the privacy layer (`session/privacy.ts`, `privacy/installation.ts`, `cli/cmd/privacy.ts`, `session/llm.ts`, `tui/component/dialog-privacy.tsx`, `core/…/config.ts`) returned **one** recorded open issue, plus one HIGH surfaced by Livecheck.
+**This is the most important caveat in this document.**
 
-Notably, **zero** secret-exposure findings — no hardcoded API keys, bearer tokens, private key material, or connection strings. `HF_TOKEN` is resolved from the environment or `{env:HF_TOKEN}` config interpolation, and the `/privacy` TUI dialog writes back only the boolean, so a resolved token is never persisted to `opencode.json`.
+Norma resolved this repository with reference branch **`2.0`**. Because `maskode` is a full fork of OpenCode, it carries every upstream branch, and `2.0` is an *upstream* branch — not `dev`, where all Maskode work lives. Verified directly: `packages/opencode/src/session/privacy.ts` and `privacy/installation.ts` **do not exist on `2.0`**.
+
+So the 5,490 recorded issues are a scan of upstream OpenCode. The privacy layer was never in scope. That reframes two things:
+
+- The security findings above are "all in inherited upstream code" because *the entire scan* was inherited upstream code — not because the fork's own code was examined and came back clean.
+- A scoped `get_open_issues` query across the privacy files returned one issue, in `llm.ts`. That is **absence of scanning, not absence of findings.** Do not read it as a clean bill of health.
+
+`link_repository` accepts `default_branch` only as a hint — "the organization's own record wins" — and passing `dev` still returned `2.0`. Correcting this requires changing the reference branch to `dev` in the Norma portal, then running a full scan.
+
+### What was actually checked in the fork's own code
+
+Everything verified about the privacy layer came from **Livecheck**, which evaluates file content supplied directly and therefore did cover it. Against those runs:
+
+- **Zero secret-exposure findings** — no hardcoded API keys, bearer tokens, private key material, or connection strings. `HF_TOKEN` is resolved from the environment or `{env:HF_TOKEN}` config interpolation, and the `/privacy` TUI dialog writes back only `{ privacy: { enabled } }`, so a resolved token is never persisted to `opencode.json`.
+- One HIGH (`js-empty-catch-block`), fixed — see §4.
+- The rest were `js-no-error-handling-async`, accepted — see §4.
+
+Livecheck covered six files. It is not a substitute for a full scan of `dev`.
 
 ---
 
@@ -135,7 +152,7 @@ Wrapping each individual `await` would add noise and, in the redaction path, ris
 
 **`ts-any-type-usage` (MEDIUM, manageability) — `packages/opencode/src/session/llm.ts`**
 
-The single recorded open issue in fork-touched files. `git blame` attributes it to upstream OpenCode, not to this fork:
+The single recorded open issue returned for fork-touched files — but reported against the `2.0` snapshot of `llm.ts`, so it is not necessarily the same occurrence. Re-located by pattern on `dev`, `git blame` attributes the nearest match to upstream OpenCode, not to this fork:
 
 ```ts
 } catch (e: any) {
@@ -151,7 +168,7 @@ Left in place to keep the rebase surface against OpenCode clean. The fix belongs
 }
 ```
 
-Note: Norma reported this at line 271; it is actually at line 200. Scan line numbers are as-of the last full scan — re-locate by pattern, as Norma's own guidance says.
+Note: Norma reported line 271; the nearest matching pattern on `dev` is line 200, and on `2.0` line 200 is unrelated code. Scan line numbers are as-of the last full scan of a different branch — re-locate by pattern, as Norma's own guidance says, and treat the mapping as approximate.
 
 ### Scan coverage caveat
 
